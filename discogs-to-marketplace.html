@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Crate → Listing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#15130F;
+    --surface:#1F1B14;
+    --surface-2:#26211A;
+    --line:#3A3326;
+    --gold:#C9974C;
+    --teal:#3C7A6B;
+    --rust:#C1543B;
+    --ink:#F1EAD9;
+    --ink-muted:#B9AD96;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(201,151,76,0.06), transparent 45%),
+      radial-gradient(circle at 90% 20%, rgba(60,122,107,0.06), transparent 50%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding-bottom:80px;
+  }
+  h1,h2,h3,.display{ font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:0.04em; }
+  .mono{ font-family:'IBM Plex Mono',monospace; }
+  a{ color:var(--gold); }
+
+  /* ---------- Header ---------- */
+  header{
+    padding:36px 24px 28px;
+    border-bottom:1px solid var(--line);
+    display:flex; flex-direction:column; gap:6px;
+  }
+  header .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px; letter-spacing:0.18em; text-transform:uppercase;
+    color:var(--teal);
+  }
+  header h1{
+    font-size:clamp(28px,5vw,44px);
+    margin:0;
+    color:var(--ink);
+  }
+  header h1 span{ color:var(--gold); }
+  header p{ margin:4px 0 0; color:var(--ink-muted); max-width:640px; font-size:14.5px; line-height:1.5; }
+
+  /* ---------- Request slip (form) ---------- */
+  .wrap{ max-width:1180px; margin:0 auto; padding:0 24px; }
+  .slip{
+    margin-top:-1px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-top:3px dashed var(--gold);
+    border-radius:2px;
+    padding:22px 24px 24px;
+    position:relative;
+  }
+  .slip::before{
+    content:"";
+    position:absolute; top:-10px; left:28px;
+    width:18px; height:18px; border-radius:50%;
+    background:var(--bg); border:1px solid var(--line);
+  }
+  .slip-title{ font-size:12px; letter-spacing:0.15em; color:var(--ink-muted); margin-bottom:14px; }
+  .row{ display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end; }
+  .field{ display:flex; flex-direction:column; gap:6px; }
+  .field label{ font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-muted); }
+  .field input, .field select{
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    color:var(--ink);
+    padding:9px 11px;
+    border-radius:3px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    min-width:120px;
+  }
+  .field input:focus, .field select:focus{ outline:1px solid var(--gold); }
+  #username{ min-width:220px; }
+  button{
+    font-family:'Oswald',sans-serif;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    font-size:13px;
+    border-radius:3px;
+    border:1px solid var(--gold);
+    background:var(--gold);
+    color:#1A1610;
+    padding:10px 18px;
+    cursor:pointer;
+    transition:transform .08s ease, opacity .15s ease;
+  }
+  button:hover{ opacity:0.9; }
+  button:active{ transform:translateY(1px); }
+  button:disabled{ opacity:0.45; cursor:not-allowed; }
+  button.ghost{
+    background:transparent; color:var(--ink); border-color:var(--line);
+  }
+  button.ghost:hover{ border-color:var(--gold); color:var(--gold); }
+  button.small{ padding:6px 10px; font-size:11px; }
+
+  .log{
+    margin-top:14px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--ink-muted);
+    max-height:120px;
+    overflow-y:auto;
+    border-top:1px solid var(--line);
+    padding-top:10px;
+    display:none;
+  }
+  .log.visible{ display:block; }
+  .log .err{ color:var(--rust); }
+  .log .ok{ color:var(--teal); }
+  .progress-bar{
+    height:4px; background:var(--surface-2); border-radius:2px; overflow:hidden; margin-top:12px; display:none;
+  }
+  .progress-bar.visible{ display:block; }
+  .progress-fill{ height:100%; width:0%; background:var(--gold); transition:width .25s ease; }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{
+    margin-top:28px;
+    display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;
+  }
+  .toolbar .count{ font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--ink-muted); }
+  .toolbar .count b{ color:var(--gold); }
+  .filters{ display:flex; gap:10px; flex-wrap:wrap; }
+
+  /* ---------- Grid / cards ---------- */
+  .grid{
+    margin-top:18px;
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+    gap:18px;
+  }
+  .tag{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:4px;
+    position:relative;
+    overflow:hidden;
+  }
+  .tag::before{
+    content:"";
+    position:absolute; top:14px; left:-9px;
+    width:18px; height:18px; border-radius:50%;
+    background:var(--bg); border:1px solid var(--line);
+  }
+  .tag-head{
+    display:flex; gap:12px; padding:16px 16px 14px 26px;
+    border-bottom:1px dashed var(--line);
+  }
+  .tag-head img{
+    width:64px; height:64px; object-fit:cover; border-radius:3px; border:1px solid var(--line); background:var(--surface-2);
+    flex-shrink:0;
+  }
+  .tag-head .meta{ min-width:0; }
+  .tag-head h3{
+    font-size:15px; margin:0 0 4px; color:var(--ink); line-height:1.25;
+    overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  }
+  .tag-head .sub{ font-size:11px; color:var(--ink-muted); font-family:'IBM Plex Mono',monospace; }
+  .badge{
+    display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:10px;
+    letter-spacing:0.08em; text-transform:uppercase; color:var(--teal);
+    border:1px solid var(--teal); border-radius:2px; padding:2px 6px; margin-top:6px;
+    transform:rotate(-2deg);
+  }
+  .tag-body{ padding:14px 16px 16px 26px; display:flex; flex-direction:column; gap:10px; }
+  .inline-fields{ display:flex; gap:10px; }
+  .inline-fields .field{ flex:1; min-width:0; }
+  .inline-fields input, .inline-fields select{ width:100%; min-width:0; }
+  .price-row{ display:flex; gap:8px; align-items:center; }
+  .price-row .hint{ font-size:11px; color:var(--ink-muted); font-family:'IBM Plex Mono',monospace; }
+  textarea{
+    width:100%; min-height:120px; resize:vertical;
+    background:var(--surface-2); border:1px solid var(--line); color:var(--ink);
+    font-family:'Inter',sans-serif; font-size:12.5px; line-height:1.5; padding:10px; border-radius:3px;
+  }
+  .tag-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .copied-flash{ color:var(--teal); font-size:11px; font-family:'IBM Plex Mono',monospace; opacity:0; transition:opacity .2s; }
+  .copied-flash.show{ opacity:1; }
+
+  .empty, .notice{
+    margin-top:24px; padding:24px; border:1px dashed var(--line); border-radius:4px; color:var(--ink-muted); font-size:13.5px;
+  }
+  .notice.error{ border-color:var(--rust); color:#E3A294; }
+  footer{
+    max-width:1180px; margin:48px auto 0; padding:18px 24px 0; border-top:1px solid var(--line);
+    color:var(--ink-muted); font-size:12px; line-height:1.6;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap" style="padding:0;">
+    <div class="eyebrow">Discogs Collection → Facebook Marketplace</div>
+    <h1>Crate <span>→</span> Listing</h1>
+    <p>Pull a public Discogs collection and turn every record into a ready-to-paste Facebook Marketplace listing — title, description, and a price suggestion pulled straight from the Discogs marketplace.</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="slip">
+    <div class="slip-title">PULL REQUEST · ENTER A DISCOGS USERNAME</div>
+    <div class="row">
+      <div class="field">
+        <label for="username">Discogs username</label>
+        <input id="username" type="text" value="TheMerchantOfMusic" />
+      </div>
+      <div class="field">
+        <label for="maxPages">Max pages (50/page)</label>
+        <input id="maxPages" type="number" min="1" max="40" value="4" style="width:90px;" />
+      </div>
+      <div class="field">
+        <button id="pullBtn">Pull collection</button>
+      </div>
+      <div class="field">
+        <button id="stopBtn" class="ghost" disabled>Stop</button>
+      </div>
+    </div>
+    <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="toolbar" id="toolbar" style="display:none;">
+    <div class="count" id="countText"></div>
+    <div class="filters">
+      <input id="searchBox" type="text" placeholder="Filter by artist or title…" style="background:var(--surface-2);border:1px solid var(--line);color:var(--ink);padding:9px 11px;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;min-width:220px;" />
+      <select id="genreFilter" style="background:var(--surface-2);border:1px solid var(--line);color:var(--ink);padding:9px 11px;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;">
+        <option value="">All genres</option>
+      </select>
+      <button class="ghost small" id="csvBtn">Download CSV</button>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="emptyState">No records pulled yet. Enter a username above and click <strong>Pull collection</strong>.</div>
+</div>
+
+<footer>
+  <p><strong>Heads up:</strong> Facebook does not provide a public API for creating Marketplace listings from a browser app, so this tool can't auto-post for you. Each card gives you a copy-ready title and description plus a button that opens Facebook's "create listing" page — paste the text in and add your own photos. Price suggestions come from Discogs' current marketplace lowest-price data where available and are estimates, not guarantees.</p>
+  <p>Network requests go through public CORS proxies (allorigins, codetabs, corsproxy.io) since the Discogs API doesn't send browser CORS headers directly. If a pull fails, wait a few seconds and try again — you may be rate-limited.</p>
+</footer>
+
+<script>
+(function(){
+  const PROXIES = [
+    (u) => u,
+    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+    (u) => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+  ];
+
+  const CONDITIONS = ["Mint (M)","Near Mint (NM)","Very Good Plus (VG+)","Very Good (VG)","Good Plus (G+)","Good (G)","Fair (F)","Poor (P)"];
+
+  let stopRequested = false;
+  let allItems = [];
+
+  const $ = (id) => document.getElementById(id);
+  const logEl = $('log');
+  const progressBar = $('progressBar');
+  const progressFill = $('progressFill');
+
+  function log(msg, type){
+    logEl.classList.add('visible');
+    const line = document.createElement('div');
+    if(type) line.className = type;
+    line.textContent = msg;
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+  // Defensive fetch: tries direct, then a chain of CORS proxies.
+  // Always validates JSON before returning, never throws a raw parse error to the caller.
+  async function discogsFetch(url, { silent } = {}){
+    let lastErr = null;
+    for(const wrap of PROXIES){
+      const target = wrap(url);
+      try{
+        const res = await fetch(target, {
+          headers: { 'Accept': 'application/vnd.discogs.v2.discogs+json' }
+        });
+        if(!res.ok){
+          lastErr = new Error(`HTTP ${res.status} via ${target.split('?')[0]}`);
+          continue;
+        }
+        const text = await res.text();
+        let data;
+        try{
+          data = JSON.parse(text);
+        }catch(parseErr){
+          lastErr = new Error(`Invalid JSON from ${target.split('?')[0]} (likely blocked or rate-limited)`);
+          continue;
+        }
+        if(data && typeof data === 'object' && data.message && !data.releases && !data.pagination && !data.id && !data.lowest_price && Object.keys(data).length <= 2){
+          lastErr = new Error(`Discogs error: ${data.message}`);
+          continue;
+        }
+        return data;
+      }catch(networkErr){
+        lastErr = networkErr;
+        continue;
+      }
+    }
+    if(!silent) log(`✕ ${lastErr ? lastErr.message : 'request failed'}`, 'err');
+    throw lastErr || new Error('All fetch attempts failed');
+  }
+
+  function cleanName(name){
+    return (name || '').replace(/\s*\(\d+\)\s*$/, '').trim();
+  }
+
+  function escapeHtml(s){
+    return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function buildListing(item, condition){
+    const bi = item.basic_information;
+    const artists = (bi.artists||[]).map(a=>cleanName(a.name)).join(', ') || 'Unknown Artist';
+    const title = bi.title || 'Untitled';
+    const year = bi.year || '';
+    const formats = (bi.formats||[]).map(f=>f.name).filter(Boolean).join('/') || 'Vinyl';
+    const formatDesc = (bi.formats||[]).flatMap(f=>f.descriptions||[]).join(', ');
+    const labelInfo = (bi.labels||[]).map(l=>`${l.name}${l.catno ? ` (${l.catno})` : ''}`).join(', ');
+    const genres = (bi.genres||[]).join(', ');
+    const styles = (bi.styles||[]).join(', ');
+
+    const heading = `${artists} – ${title}${year ? ` (${year})` : ''} Vinyl ${formats}`.replace(/\s+/g,' ').trim();
+
+    const descLines = [
+      `${artists} – "${title}"${year ? ` (${year})` : ''}`,
+      formats ? `Format: ${formats}${formatDesc ? ` — ${formatDesc}` : ''}` : null,
+      labelInfo ? `Label: ${labelInfo}` : null,
+      (genres || styles) ? `Genre/Style: ${[genres, styles].filter(Boolean).join(' / ')}` : null,
+      `Condition: ${condition}`,
+      '',
+      'From a smoke-free home. Sleeve and vinyl are as pictured — message with any questions or for more photos.',
+      'Bundle multiple records from my collection and save on shipping!'
+    ].filter(Boolean);
+
+    return { heading, description: descLines.join('\n') };
+  }
+
+  function render(items){
+    const grid = $('grid');
+    const empty = $('emptyState');
+    const toolbar = $('toolbar');
+    grid.innerHTML = '';
+
+    if(items.length === 0){
+      empty.style.display = 'block';
+      toolbar.style.display = 'none';
+      return;
+    }
+    empty.style.display = 'none';
+    toolbar.style.display = 'flex';
+    $('countText').innerHTML = `<b>${items.length}</b> record${items.length===1?'':'s'} loaded`;
+
+    items.forEach((item, idx) => {
+      const bi = item.basic_information;
+      const artists = (bi.artists||[]).map(a=>cleanName(a.name)).join(', ') || 'Unknown Artist';
+      const listing = buildListing(item, CONDITIONS[2]);
+      const card = document.createElement('div');
+      card.className = 'tag';
+      card.dataset.idx = idx;
+      card.innerHTML = `
+        <div class="tag-head">
+          <img src="${bi.cover_image || bi.thumb || ''}" alt="" loading="lazy" onerror="this.style.visibility='hidden'" />
+          <div class="meta">
+            <h3>${escapeHtml(artists)} — ${escapeHtml(bi.title||'')}</h3>
+            <div class="sub">${bi.year || '—'} · ${escapeHtml((bi.formats||[]).map(f=>f.name).join('/'))}</div>
+            <span class="badge">RELEASE #${bi.id}</span>
+          </div>
+        </div>
+        <div class="tag-body">
+          <div class="inline-fields">
+            <div class="field">
+              <label>Condition</label>
+              <select class="conditionSel">
+                ${CONDITIONS.map(c=>`<option ${c===CONDITIONS[2]?'selected':''}>${c}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field">
+              <label>Price (USD)</label>
+              <input class="priceInput" type="number" min="0" step="0.5" placeholder="—" />
+            </div>
+          </div>
+          <div class="price-row">
+            <button class="ghost small suggestBtn">Suggest price</button>
+            <span class="hint priceHint"></span>
+          </div>
+          <textarea class="titleField" rows="1" style="min-height:auto;">${escapeHtml(listing.heading)}</textarea>
+          <textarea class="descField">${escapeHtml(listing.description)}</textarea>
+          <div class="tag-actions">
+            <button class="copyBtn small">Copy title + description</button>
+            <button class="ghost small openFbBtn">Open Marketplace</button>
+            <span class="copied-flash">Copied ✓</span>
+          </div>
+        </div>
+      `;
+
+      const condSel = card.querySelector('.conditionSel');
+      const titleField = card.querySelector('.titleField');
+      const descField = card.querySelector('.descField');
+      const priceInput = card.querySelector('.priceInput');
+
+      condSel.addEventListener('change', () => {
+        const l = buildListing(item, condSel.value);
+        titleField.value = l.heading;
+        descField.value = l.description;
+      });
+
+      card.querySelector('.suggestBtn').addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        const hint = card.querySelector('.priceHint');
+        btn.disabled = true;
+        hint.textContent = 'looking up…';
+        try{
+          const data = await discogsFetch(`https://api.discogs.com/releases/${bi.id}`, { silent:true });
+          if(data && typeof data.lowest_price === 'number'){
+            priceInput.value = data.lowest_price;
+            hint.textContent = `Discogs lowest: $${data.lowest_price.toFixed(2)} · ${data.num_for_sale||0} for sale`;
+          } else {
+            hint.textContent = 'No marketplace listings found for this release';
+          }
+        }catch(err){
+          hint.textContent = 'Lookup failed — try again in a moment';
+        }finally{
+          btn.disabled = false;
+        }
+      });
+
+      card.querySelector('.copyBtn').addEventListener('click', async (e) => {
+        const text = `${titleField.value}\n\n${descField.value}${priceInput.value ? `\n\nAsking: $${priceInput.value}` : ''}`;
+        try{
+          await navigator.clipboard.writeText(text);
+        }catch(err){
+          const ta = document.createElement('textarea');
+          ta.value = text; document.body.appendChild(ta); ta.select();
+          document.execCommand('copy'); document.body.removeChild(ta);
+        }
+        const flash = card.querySelector('.copied-flash');
+        flash.classList.add('show');
+        setTimeout(()=>flash.classList.remove('show'), 1400);
+      });
+
+      card.querySelector('.openFbBtn').addEventListener('click', () => {
+        window.open('https://www.facebook.com/marketplace/create/item', '_blank');
+      });
+
+      grid.appendChild(card);
+    });
+  }
+
+  function applyFilters(){
+    const q = $('searchBox').value.trim().toLowerCase();
+    const genre = $('genreFilter').value;
+    const filtered = allItems.filter(item => {
+      const bi = item.basic_information;
+      const hay = `${(bi.artists||[]).map(a=>a.name).join(' ')} ${bi.title}`.toLowerCase();
+      const matchesQ = !q || hay.includes(q);
+      const matchesGenre = !genre || (bi.genres||[]).includes(genre);
+      return matchesQ && matchesGenre;
+    });
+    render(filtered);
+  }
+
+  function populateGenreFilter(){
+    const genres = new Set();
+    allItems.forEach(item => (item.basic_information.genres||[]).forEach(g=>genres.add(g)));
+    const sel = $('genreFilter');
+    sel.innerHTML = '<option value="">All genres</option>' +
+      [...genres].sort().map(g=>`<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('');
+  }
+
+  function downloadCsv(){
+    const rows = [['Artist','Title','Year','Format','Label','Catalog#','Genres','Styles','Release ID']];
+    allItems.forEach(item => {
+      const bi = item.basic_information;
+      rows.push([
+        (bi.artists||[]).map(a=>cleanName(a.name)).join('; '),
+        bi.title || '',
+        bi.year || '',
+        (bi.formats||[]).map(f=>f.name).join('/'),
+        (bi.labels||[]).map(l=>l.name).join('; '),
+        (bi.labels||[]).map(l=>l.catno).join('; '),
+        (bi.genres||[]).join('; '),
+        (bi.styles||[]).join('; '),
+        bi.id
+      ]);
+    });
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type:'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'discogs-collection.csv';
+    a.click();
+  }
+
+  async function pullCollection(){
+    const username = $('username').value.trim();
+    if(!username){ log('Enter a Discogs username first.', 'err'); return; }
+    const maxPages = Math.max(1, Math.min(40, parseInt($('maxPages').value, 10) || 4));
+
+    stopRequested = false;
+    allItems = [];
+    $('pullBtn').disabled = true;
+    $('stopBtn').disabled = false;
+    progressBar.classList.add('visible');
+    progressFill.style.width = '0%';
+    logEl.innerHTML = '';
+    logEl.classList.add('visible');
+    render([]);
+    $('emptyState').textContent = 'Pulling…';
+
+    log(`→ Looking up collection for "${username}"…`);
+
+    let page = 1, totalPages = 1;
+    try{
+      do{
+        if(stopRequested){ log('■ Stopped by user.'); break; }
+        const url = `https://api.discogs.com/users/${encodeURIComponent(username)}/collection/folders/0/releases?page=${page}&per_page=50&sort=artist&sort_order=asc`;
+        const data = await discogsFetch(url);
+
+        if(!data.releases){
+          log('✕ Unexpected response shape — this user\'s collection may be private.', 'err');
+          break;
+        }
+        allItems = allItems.concat(data.releases);
+        totalPages = Math.min(data.pagination ? data.pagination.pages : 1, maxPages);
+        log(`✓ Page ${page}/${totalPages} — ${data.releases.length} releases (running total: ${allItems.length})`, 'ok');
+        progressFill.style.width = `${Math.round((page/totalPages)*100)}%`;
+
+        page++;
+        if(page <= totalPages){
+          await sleep(1300); // be polite to Discogs' rate limit (and the shared proxies)
+        }
+      } while(page <= totalPages);
+
+      if(allItems.length > 0){
+        log(`Done — ${allItems.length} records loaded.`, 'ok');
+        populateGenreFilter();
+        render(allItems);
+      } else {
+        $('emptyState').textContent = `No releases found for "${username}". The collection may be empty, private, or the username may be wrong.`;
+      }
+    }catch(err){
+      log(`✕ Pull failed: ${err.message}`, 'err');
+      $('emptyState').textContent = `Couldn't load this collection (${err.message}). Wait a moment and try again — public CORS proxies are sometimes rate-limited.`;
+    }finally{
+      $('pullBtn').disabled = false;
+      $('stopBtn').disabled = true;
+    }
+  }
+
+  $('pullBtn').addEventListener('click', pullCollection);
+  $('stopBtn').addEventListener('click', () => { stopRequested = true; });
+  $('searchBox').addEventListener('input', applyFilters);
+  $('genreFilter').addEventListener('change', applyFilters);
+  $('csvBtn').addEventListener('click', downloadCsv);
+})();
+</script>
+</body>
+</html>
