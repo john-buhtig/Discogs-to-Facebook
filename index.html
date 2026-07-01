@@ -218,7 +218,16 @@
     <div class="row">
       <div class="field">
         <label for="username">Discogs username</label>
-        <input id="username" type="text" value="TheMerchantOfMusic" />
+        <input id="username" type="text" placeholder="e.g.  DiscogsUser" />
+      </div>
+      <div class="field">
+        <label for="folderSelect">Folder</label>
+        <select id="folderSelect" disabled style="min-width:180px;">
+          <option value="0">All (find folders first)</option>
+        </select>
+      </div>
+      <div class="field">
+        <button id="findFoldersBtn" class="ghost">Find folders</button>
       </div>
       <div class="field">
         <label for="maxPages">Max pages (50/page)</label>
@@ -512,9 +521,38 @@
     a.click();
   }
 
+  async function findFolders(){
+    const username = $('username').value.trim();
+    if(!username){ log('Enter a Discogs username first.', 'err'); return; }
+    const btn = $('findFoldersBtn');
+    const sel = $('folderSelect');
+    btn.disabled = true;
+    sel.disabled = true;
+    logEl.classList.add('visible');
+    log(`→ Looking up folders for "${username}"…`);
+    try{
+      const data = await discogsFetch(`https://api.discogs.com/users/${encodeURIComponent(username)}/collection/folders`);
+      if(!data.folders || !data.folders.length){
+        log('✕ No folders found — the collection may be private.', 'err');
+        return;
+      }
+      sel.innerHTML = data.folders.map(f =>
+        `<option value="${f.id}">${escapeHtml(f.name)} (${f.count})</option>`
+      ).join('');
+      sel.value = '0';
+      sel.disabled = false;
+      log(`✓ Found ${data.folders.length} folder(s).`, 'ok');
+    }catch(err){
+      log(`✕ Couldn't load folders: ${err.message}`, 'err');
+    }finally{
+      btn.disabled = false;
+    }
+  }
+
   async function pullCollection(){
     const username = $('username').value.trim();
     if(!username){ log('Enter a Discogs username first.', 'err'); return; }
+    const folderId = $('folderSelect').value || '0';
     const maxPages = Math.max(1, Math.min(40, parseInt($('maxPages').value, 10) || 4));
 
     stopRequested = false;
@@ -534,7 +572,7 @@
     try{
       do{
         if(stopRequested){ log('■ Stopped by user.'); break; }
-        const url = `https://api.discogs.com/users/${encodeURIComponent(username)}/collection/folders/0/releases?page=${page}&per_page=50&sort=artist&sort_order=asc`;
+        const url = `https://api.discogs.com/users/${encodeURIComponent(username)}/collection/folders/${folderId}/releases?page=${page}&per_page=50&sort=artist&sort_order=asc`;
         const data = await discogsFetch(url);
 
         if(!data.releases){
@@ -568,6 +606,7 @@
     }
   }
 
+  $('findFoldersBtn').addEventListener('click', findFolders);
   $('pullBtn').addEventListener('click', pullCollection);
   $('stopBtn').addEventListener('click', () => { stopRequested = true; });
   $('searchBox').addEventListener('input', applyFilters);
