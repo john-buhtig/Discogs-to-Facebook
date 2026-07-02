@@ -218,7 +218,7 @@
     <div class="row">
       <div class="field">
         <label for="username">Discogs username</label>
-        <input id="username" type="text" placeholder="e.g.  DiscogsUser" />
+        <input id="username" type="text" placeholder="DiscogsUser" />
       </div>
       <div class="field">
         <label for="folderSelect">Folder</label>
@@ -228,6 +228,10 @@
       </div>
       <div class="field">
         <button id="findFoldersBtn" class="ghost">Find folders</button>
+      </div>
+      <div class="field">
+        <label for="discogsToken">Discogs token <span style="opacity:.6;">(optional)</span></label>
+        <input id="discogsToken" type="password" placeholder="only needed for private folders" style="min-width:200px;" />
       </div>
       <div class="field">
         <label for="maxPages">Max pages (50/page)</label>
@@ -296,7 +300,16 @@
 
   // Defensive fetch: tries direct, then a chain of CORS proxies.
   // Always validates JSON before returning, never throws a raw parse error to the caller.
-  async function discogsFetch(url, { silent } = {}){
+  function withToken(url){
+    const token = $('discogsToken').value.trim();
+    if(!token) return url;
+    const u = new URL(url);
+    u.searchParams.set('token', token);
+    return u.toString();
+  }
+
+  async function discogsFetch(rawUrl, { silent } = {}){
+    const url = withToken(rawUrl);
     let lastErr = null;
     for(const wrap of PROXIES){
       const target = wrap(url);
@@ -542,6 +555,9 @@
       sel.value = '0';
       sel.disabled = false;
       log(`✓ Found ${data.folders.length} folder(s).`, 'ok');
+      if(data.folders.length === 1 && !$('discogsToken').value.trim()){
+        log('ℹ Only the "All" folder is visible. Discogs keeps custom folders private by default — if this is your own collection, paste a personal access token above (Settings → Developers on discogs.com) and click Find folders again.', 'err');
+      }
     }catch(err){
       log(`✕ Couldn't load folders: ${err.message}`, 'err');
     }finally{
